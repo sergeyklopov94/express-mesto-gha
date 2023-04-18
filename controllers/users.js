@@ -25,3 +25,31 @@ module.exports.createUser = (req, res, next) => {
       next(err);
     });
 };
+
+module.exports.updateUser = (req, res, next) => {
+  const { name, about } = req.body;
+
+  User.findByIdAndUpdate(req.user, { name, about },
+    {
+      new: true,
+      runValidators: true
+    })
+    .then(user => res.send({ data: user }))
+    .catch((err) => {
+      next(err);
+    });
+};
+
+module.exports.updateAvatar = (req, res, next) => {
+  const { avatar } = req.body;
+
+  User.findByIdAndUpdate(req.user, { avatar },
+    {
+      new: true,
+      runValidators: true
+    })
+    .then(user => res.send({ data: user }))
+    .catch((err) => {
+      next(err);
+    });
+};
