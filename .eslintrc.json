@@ -5,7 +5,8 @@
     },
     "extends": [
         "eslint:recommended",
-        "plugin:react/recommended"
+        "plugin:react",
+        "airbnb-base"
     ],
     "overrides": [
     ],
@@ -17,5 +18,6 @@
         "react"
     ],
     "rules": {
+      "no-underscore-dangle": "off"
     }
 }

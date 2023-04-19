@@ -27,6 +27,4 @@ app.use((req, res, next) => {
 app.use('/users', usersRouter);
 app.use('/cards', cardsRouter);
 
-app.listen(PORT, () => {
-  console.log('хрен');
-});
+app.listen(PORT);

@@ -1,15 +1,18 @@
 const Card = require('../models/card');
 
-module.exports.getCards = (req, res, next) => {
+const { UNCORRECT_DATA, DATA_NOT_FOUND, DEFAULT_ERROR } = require('../utils/errorStatus');
+
+module.exports.getCards = (req, res) => {
   Card.find({})
     .populate('owner')
     .then((cards) => res.send({ data: cards }))
     .catch((err) => {
-      next(err);
+      return res.status(DEFAULT_ERROR)
+      .send({ message: "Что-то пошло не так" })
     });
 };
 
-module.exports.createCard = (req, res, next) => {
+module.exports.createCard = (req, res) => {
   const { name, link } = req.body;
   const { user } = req;
 
@@ -17,16 +20,28 @@ module.exports.createCard = (req, res, next) => {
     .then(card => card.populate('owner'))
     .then(card => res.send({ data: card }))
     .catch((err) => {
-      next(err);
+      if(err.name === 'ValidationError') {
+        return res.status(UNCORRECT_DATA)
+        .send({ message: "Переданы некорректные данные при создании карточки" })
+      } else {
+        return res.status(DEFAULT_ERROR)
+        .send({ message: "Что-то пошло не так" })
+      }
     });
 };
 
-module.exports.deleteCardById = (req, res, next) => {
+module.exports.deleteCardById = (req, res) => {
   Card.findByIdAndDelete(req.params.cardId)
     .populate('owner')
     .then(card => res.send({ data: card }))
     .catch((err) => {
-      next(err);
+      if(err.name === 'CastError') {
+        return res.status(DATA_NOT_FOUND)
+        .send({ message: "Карточка с указанным _id не найдена" })
+      } else {
+        return res.status(DEFAULT_ERROR)
+        .send({ message: "Что-то пошло не так" })
+      }
     });
 };
 
@@ -35,7 +50,16 @@ module.exports.likeCard = (req, res) => {
   .populate('owner')
   .then(card => res.send({ data: card }))
   .catch((err) => {
-    next(err);
+    if(err.name === 'CastError') {
+      return res.status(DATA_NOT_FOUND)
+      .send({ message: "Передан несуществующий _id карточки" })
+    } else if(err.name === 'ValidationError') {
+      return res.status(UNCORRECT_DATA)
+        .send({ message: "Переданы некорректные данные для постановки лайка" })
+    } else {
+      return res.status(DEFAULT_ERROR)
+      .send({ message: "Что-то пошло не так" })
+    }
   });
 };
 
@@ -44,6 +68,15 @@ module.exports.dislikeCard = (req, res) => {
   .populate('owner')
   .then(card => res.send({ data: card }))
   .catch((err) => {
-    next(err);
+    if(err.name === 'CastError') {
+      return res.status(DATA_NOT_FOUND)
+      .send({ message: "Передан несуществующий _id карточки" })
+    } else if(err.name === 'ValidationError') {
+      return res.status(UNCORRECT_DATA)
+        .send({ message: "Переданы некорректные данные для снятия лайка" })
+    } else {
+      return res.status(DEFAULT_ERROR)
+      .send({ message: "Что-то пошло не так" })
+    }
   });
 }
