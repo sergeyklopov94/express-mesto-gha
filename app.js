@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
+const { DATA_NOT_FOUND } = require('./utils/errorStatus');
 
 const { PORT = 3000 } = process.env;
 
@@ -27,4 +28,10 @@ app.use((req, res, next) => {
 app.use('/users', usersRouter);
 app.use('/cards', cardsRouter);
 
-app.listen(PORT);
+app.use((req, res) => {
+  res.status(DATA_NOT_FOUND).send({ message: "Некорректный запрос" })
+});
+
+app.listen(PORT, () => {
+  console.log('сервер запущен корректно');
+});

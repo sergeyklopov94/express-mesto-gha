@@ -33,11 +33,18 @@ module.exports.createCard = (req, res) => {
 module.exports.deleteCardById = (req, res) => {
   Card.findByIdAndDelete(req.params.cardId)
     .populate('owner')
-    .then(card => res.send({ data: card }))
+    .then((card) => {
+      if(card === null) {
+        return res.status(DATA_NOT_FOUND)
+        .send({ message: "Передан несуществующий _id карточки" })
+      } else {
+        res.send({ data: card })
+      }
+    })
     .catch((err) => {
       if(err.name === 'CastError') {
-        return res.status(DATA_NOT_FOUND)
-        .send({ message: "Карточка с указанным _id не найдена" })
+        return res.status(UNCORRECT_DATA)
+        .send({ message: "Переданы некорректные данные для удаления карточки" })
       } else {
         return res.status(DEFAULT_ERROR)
         .send({ message: "Что-то пошло не так" })
@@ -48,12 +55,16 @@ module.exports.deleteCardById = (req, res) => {
 module.exports.likeCard = (req, res) => {
   Card.findByIdAndUpdate(req.params.cardId, { $addToSet: { likes: req.user._id } }, { new: true })
   .populate('owner')
-  .then(card => res.send({ data: card }))
-  .catch((err) => {
-    if(err.name === 'CastError') {
+  .then((card) => {
+    if(card === null) {
       return res.status(DATA_NOT_FOUND)
       .send({ message: "Передан несуществующий _id карточки" })
-    } else if(err.name === 'ValidationError') {
+    } else {
+      res.send({ data: card })
+    }
+  })
+  .catch((err) => {
+    if(err.name === 'CastError') {
       return res.status(UNCORRECT_DATA)
         .send({ message: "Переданы некорректные данные для постановки лайка" })
     } else {
@@ -66,17 +77,21 @@ module.exports.likeCard = (req, res) => {
 module.exports.dislikeCard = (req, res) => {
   Card.findByIdAndUpdate(req.params.cardId, { $pull: { likes: req.user._id } }, { new: true })
   .populate('owner')
-  .then(card => res.send({ data: card }))
-  .catch((err) => {
-    if(err.name === 'CastError') {
+  .then((card) => {
+    if(card === null) {
       return res.status(DATA_NOT_FOUND)
       .send({ message: "Передан несуществующий _id карточки" })
-    } else if(err.name === 'ValidationError') {
+    } else {
+      res.send({ data: card })
+    }
+  })
+  .catch((err) => {
+    if(err.name === 'CastError') {
       return res.status(UNCORRECT_DATA)
-        .send({ message: "Переданы некорректные данные для снятия лайка" })
+        .send({ message: "Переданы некорректные данные для cнятия лайка" })
     } else {
       return res.status(DEFAULT_ERROR)
       .send({ message: "Что-то пошло не так" })
     }
   });
-}
+};
