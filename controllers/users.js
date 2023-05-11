@@ -14,6 +14,7 @@ module.exports.getUsers = (req, res) => {
 };
 
 module.exports.getUserById = (req, res) => {
+
   User.findById(req.params.userId)
     .then(user => res.send({ data: user }))
     .catch((err) => {
@@ -24,6 +25,16 @@ module.exports.getUserById = (req, res) => {
         return res.status(DEFAULT_ERROR)
         .send({ message: "Что-то пошло не так" })
       }
+    });
+};
+
+module.exports.getCurrentUser = (req, res) => {
+
+  User.findById(req.user._id)
+    .then(user => res.send({ data: user }))
+    .catch((err) => {
+      return res.status(DEFAULT_ERROR)
+      .send({ message: "Что-то пошло не так" })
     });
 };
 
