@@ -14,7 +14,6 @@ module.exports.getUsers = (req, res) => {
 };
 
 module.exports.getUserById = (req, res) => {
-
   User.findById(req.params.userId)
     .then(user => res.send({ data: user }))
     .catch((err) => {
@@ -29,7 +28,6 @@ module.exports.getUserById = (req, res) => {
 };
 
 module.exports.getCurrentUser = (req, res) => {
-
   User.findById(req.user._id)
     .then(user => res.send({ data: user }))
     .catch((err) => {
@@ -40,7 +38,6 @@ module.exports.getCurrentUser = (req, res) => {
 
 module.exports.createUser = (req, res) => {
   const { name, about, avatar, email, password } = req.body;
-
   bcrypt.hash(password, 10)
     .then((hash) => User.create({
       name,
@@ -67,7 +64,6 @@ module.exports.createUser = (req, res) => {
 
 module.exports.updateUser = (req, res) => {
   const { name, about } = req.body;
-
   User.findByIdAndUpdate(req.user, { name, about },
     {
       new: true,
@@ -87,7 +83,6 @@ module.exports.updateUser = (req, res) => {
 
 module.exports.updateAvatar = (req, res) => {
   const { avatar } = req.body;
-
   User.findByIdAndUpdate(req.user, { avatar },
     {
       new: true,
@@ -107,7 +102,6 @@ module.exports.updateAvatar = (req, res) => {
 
 module.exports.login = (req, res) => {
   const { email, password } = req.body;
-
   User.findUserByCredentials(email, password)
     .then((user) => {
       const token = jwt.sign(

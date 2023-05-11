@@ -14,9 +14,7 @@ module.exports.getCards = (req, res) => {
 
 module.exports.createCard = (req, res) => {
   const { name, link } = req.body;
-  const { user } = req;
-
-  Card.create({ name, link, owner: user._id })
+  Card.create({ name, link, owner: req.user._id })
     .then(card => card.populate('owner'))
     .then(card => res.send({ data: card }))
     .catch((err) => {
@@ -31,9 +29,18 @@ module.exports.createCard = (req, res) => {
 };
 
 module.exports.deleteCardById = (req, res) => {
-  Card.findByIdAndDelete(req.params.cardId)
-    .populate('owner')
-    .then(card => res.send({ data: card }))
+  Card.findById(req.params.cardId)
+    .then((card) => {
+      console.log(card.owner.toString());
+      console.log(req.user._id);
+      if (card.owner.toString() !== req.user._id) {
+        console.log('req.user._id');
+        throw new Error('Запрещено удаление карточки другого пользователя');
+      }
+      Card.findByIdAndDelete(req.params.cardId)
+        .populate('owner')
+        .then(() => res.send({ message: 'Карточка удалена' }))
+    })
     .catch((err) => {
       if(err.name === 'CastError') {
         return res.status(DATA_NOT_FOUND)
