@@ -28,6 +28,14 @@ app.use(auth);
 app.use('/users', usersRouter);
 app.use('/cards', cardsRouter);
 
+app.use((err, req, res, next) => {
+  const { statusCode = 500, message } = err;
+  res.status(statusCode).send({
+    message: statusCode === 500
+    ? 'На сервере произошла ошибка'
+    : message
+   });
+});
 
 app.listen(PORT, () => {
   console.log('xyi');
