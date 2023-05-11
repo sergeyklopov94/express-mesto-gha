@@ -1,6 +1,8 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
+const { login, createUser } = require('./controllers/users');
+const auth = require('./middlewares/auth');
 
 const { PORT = 3000 } = process.env;
 
@@ -24,7 +26,13 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use('/users', usersRouter);
-app.use('/cards', cardsRouter);
+app.post('/signin', login);
+app.post('/signup', createUser);
 
-app.listen(PORT);
+app.use('/users', auth, usersRouter);
+app.use('/cards', auth, cardsRouter);
+
+
+app.listen(PORT, () => {
+  console.log('xyi');
+});

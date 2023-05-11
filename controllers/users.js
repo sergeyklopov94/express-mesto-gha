@@ -1,6 +1,8 @@
 const User = require('../models/user');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
-const { UNCORRECT_DATA, DATA_NOT_FOUND, DEFAULT_ERROR } = require('../utils/errorStatus');
+const { CREATED, UNCORRECT_DATA, UNAUTHORIZED, DATA_NOT_FOUND, DEFAULT_ERROR } = require('../utils/errorStatus');
 
 module.exports.getUsers = (req, res) => {
   User.find({})
@@ -26,11 +28,22 @@ module.exports.getUserById = (req, res) => {
 };
 
 module.exports.createUser = (req, res) => {
-  const { name, about, avatar } = req.body;
+  const { name, about, avatar, email, password } = req.body;
 
-  User.create({ name, about, avatar })
+  bcrypt.hash(password, 10)
+    .then((hash) => User.create({
+      name,
+      about,
+      avatar,
+      email,
+      password: hash,
+    }))
     .then(user => res.send({ data: user }))
     .catch((err) => {
+      if(err.code === 11000) {
+        return res.status(CREATED)
+        .send({ message: "Пользователь уже существует" })
+      }
       if(err.name === 'ValidationError') {
         return res.status(UNCORRECT_DATA)
         .send({ message: "Переданы некорректные данные при создании пользователя" })
@@ -74,6 +87,47 @@ module.exports.updateAvatar = (req, res) => {
       if(err.name === 'ValidationError') {
         return res.status(UNCORRECT_DATA)
         .send({ message: "Переданы некорректные данные при обновлении аватара" })
+      } else {
+        return res.status(DEFAULT_ERROR)
+        .send({ message: "Что-то пошло не так" })
+      }
+    });
+};
+
+module.exports.login = (req, res) => {
+  const { email, password } = req.body;
+
+  User.findUserByCredentials(email, password)
+    .then((user) => {
+      const token = jwt.sign(
+        { _id: user._id},
+        'secret-key',
+        {expiresIn: '7d'});
+      res.cookie('jwt', token, {
+        maxAge: 3600000,
+        httpOnly: true,
+        sameSite: true
+      })
+      res.send({ token });
+    })
+    .catch((err) => {
+      if(err.status === 401) {
+        return res.status(UNAUTHORIZED)
+        .send({ message: "Неверное имя пользователя или пароль" })
+      } else {
+        return res.status(DEFAULT_ERROR)
+        .send({ message: "Что-то пошло не так" })
+      }
+    });
+};
+
+module.exports.deleteUserById = (req, res) => {
+  User.findByIdAndDelete(req.params.userId)
+    .then(user => res.send({ data: user }))
+    .catch((err) => {
+      if(err.name === 'CastError') {
+        return res.status(DATA_NOT_FOUND)
+        .send({ message: "Карточка с указанным _id не найдена" })
       } else {
         return res.status(DEFAULT_ERROR)
         .send({ message: "Что-то пошло не так" })
