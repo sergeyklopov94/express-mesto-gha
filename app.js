@@ -30,7 +30,10 @@ app.use(auth);
 app.use('/users', usersRouter);
 app.use('/cards', cardsRouter);
 
-app.use((err, req, res) => {
+app.use(errors());
+
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
   const { statusCode = 500, message } = err;
   res.status(statusCode).send({
     message: statusCode === 500
@@ -38,8 +41,6 @@ app.use((err, req, res) => {
       : message,
   });
 });
-
-app.use(errors());
 
 app.listen(PORT, () => {
   console.log('сервер запущен');

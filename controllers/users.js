@@ -4,7 +4,7 @@ const User = require('../models/user');
 
 const DataNotFoundError = require('../errors/data-not-found-err');
 const UncorrectDataError = require('../errors/uncorrect-data-err');
-const UnauthorizedError = require('../errors/unauthorized-err');
+const ConflictError = require('../errors/conflict-err');
 
 module.exports.getUsers = (req, res, next) => {
   User.find({})
@@ -48,7 +48,7 @@ module.exports.createUser = (req, res, next) => {
     .then((user) => res.send({ data: user }))
     .catch((err) => {
       if (err.code === 11000) {
-        next(new UnauthorizedError('Пользователь уже существует'));
+        next(new ConflictError('Пользователь уже существует'));
       }
       if (err.name === 'ValidationError') {
         next(new UncorrectDataError('Переданы некорректные данные при создании пользователя'));
