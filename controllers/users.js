@@ -112,26 +112,4 @@ module.exports.login = (req, res, next) => {
       res.send({ token });
     })
     .catch(next);
-    //   (err) => {
-    //   if(err.status === 401) {
-    //     return res.status(UNAUTHORIZED)
-    //     .send({ message: "Неверное имя пользователя или пароль" })
-    //   } else {
-    //     next(err);
-    //   }
-    // });
 };
-
-// module.exports.deleteUserById = (req, res) => {
-//   User.findByIdAndDelete(req.params.userId)
-//     .then(user => res.send({ data: user }))
-//     .catch((err) => {
-//       if(err.name === 'CastError') {
-//         return res.status(DATA_NOT_FOUND)
-//         .send({ message: "Карточка с указанным _id не найдена" })
-//       } else {
-//         return res.status(DEFAULT_ERROR)
-//         .send({ message: "Что-то пошло не так" })
-//       }
-//     });
-// };
