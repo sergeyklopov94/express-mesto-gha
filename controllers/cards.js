@@ -47,9 +47,16 @@ module.exports.deleteCardById = (req, res, next) => {
 };
 
 module.exports.likeCard = (req, res, next) => {
-  Card.findByIdAndUpdate(req.params.cardId, { $addToSet: { likes: req.user._id } }, { new: true })
-    .populate('owner')
-    .then((card) => res.send({ data: card }))
+  Card.findById(req.params.cardId)
+    .then((card) => {
+      if (!card) {
+        throw new DataNotFoundError('Карточка не существует');
+      }
+      // eslint-disable-next-line max-len
+      Card.findByIdAndUpdate(req.params.cardId, { $addToSet: { likes: req.user._id } }, { new: true })
+        .populate('owner')
+        .then((cardLike) => res.send({ data: cardLike }));
+    })
     .catch((err) => {
       if (err.name === 'CastError') {
         next(new DataNotFoundError('Передан несуществующий _id карточки'));
@@ -62,9 +69,15 @@ module.exports.likeCard = (req, res, next) => {
 };
 
 module.exports.dislikeCard = (req, res, next) => {
-  Card.findByIdAndUpdate(req.params.cardId, { $pull: { likes: req.user._id } }, { new: true })
-    .populate('owner')
-    .then((card) => res.send({ data: card }))
+  Card.findById(req.params.cardId)
+    .then((card) => {
+      if (!card) {
+        throw new DataNotFoundError('Карточка не существует');
+      }
+      Card.findByIdAndUpdate(req.params.cardId, { $pull: { likes: req.user._id } }, { new: true })
+        .populate('owner')
+        .then((cardDislike) => res.send({ data: cardDislike }));
+    })
     .catch((err) => {
       if (err.name === 'CastError') {
         next(new DataNotFoundError('Передан несуществующий _id карточки'));

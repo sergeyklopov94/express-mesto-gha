@@ -17,6 +17,7 @@ app.use(cookieParser());
 
 const usersRouter = require('./routes/users');
 const cardsRouter = require('./routes/cards');
+const DataNotFoundError = require('./errors/data-not-found-err');
 
 mongoose.connect('mongodb://127.0.0.1:27017/mestodb', {
   useNewUrlParser: true,
@@ -29,6 +30,10 @@ app.use(auth);
 
 app.use('/users', usersRouter);
 app.use('/cards', cardsRouter);
+
+app.use('*', (req, res, next) => {
+  next(new DataNotFoundError('Несуществующий путь'));
+});
 
 app.use(errors());
 
