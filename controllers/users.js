@@ -1,52 +1,65 @@
-const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 
-const { UNCORRECT_DATA, DATA_NOT_FOUND, DEFAULT_ERROR } = require('../utils/errorStatus');
+const DataNotFoundError = require('../errors/data-not-found-err');
+const UncorrectDataError = require('../errors/uncorrect-data-err');
+const UnauthorizedError = require('../errors/unauthorized-err');
 
-module.exports.getUsers = (req, res) => {
+module.exports.getUsers = (req, res, next) => {
   User.find({})
     .then((users) => res.send({ data: users }))
-    .catch(() => res.status(DEFAULT_ERROR)
-      .send({ message: 'Что-то пошло не так' }));
+    .catch(next);
 };
 
-module.exports.getUserById = (req, res) => {
+module.exports.getUserById = (req, res, next) => {
   User.findById(req.params.userId)
     .then((user) => {
-      if (user === null) {
-        return res.status(DATA_NOT_FOUND)
-          .send({ message: 'Пользователь по указанному _id не найден' });
+      if (!user) {
+        throw new DataNotFoundError('Пользователь по указанному _id не найден');
       }
-      return res.send({ data: user });
+      res.send({ data: user });
     })
-    .catch((err) => {
-      if (err instanceof mongoose.Error.CastError) {
-        return res.status(UNCORRECT_DATA)
-          .send({ message: 'Переданы некорректные данные для получения информации о пользователе' });
-      }
-      return res.status(DEFAULT_ERROR)
-        .send({ message: 'Что-то пошло не так' });
-    });
+    .catch(next);
 };
 
-module.exports.createUser = (req, res) => {
-  const { name, about, avatar } = req.body;
+module.exports.getCurrentUser = (req, res, next) => {
+  User.findById(req.user._id)
+    .then((user) => res.send({ data: user }))
+    .catch(next);
+};
 
-  User.create({ name, about, avatar })
+module.exports.createUser = (req, res, next) => {
+  const {
+    name,
+    about,
+    avatar,
+    email,
+    password,
+  } = req.body;
+  bcrypt.hash(password, 10)
+    .then((hash) => User.create({
+      name,
+      about,
+      avatar,
+      email,
+      password: hash,
+    }))
     .then((user) => res.send({ data: user }))
     .catch((err) => {
-      if (err instanceof mongoose.Error.ValidationError) {
-        return res.status(UNCORRECT_DATA)
-          .send({ message: 'Переданы некорректные данные при создании пользователя' });
+      if (err.code === 11000) {
+        next(new UnauthorizedError('Пользователь уже существует'));
       }
-      return res.status(DEFAULT_ERROR)
-        .send({ message: 'Что-то пошло не так' });
+      if (err.name === 'ValidationError') {
+        next(new UncorrectDataError('Переданы некорректные данные при создании пользователя'));
+      } else {
+        next(err);
+      }
     });
 };
 
-module.exports.updateUser = (req, res) => {
+module.exports.updateUser = (req, res, next) => {
   const { name, about } = req.body;
-
   User.findByIdAndUpdate(
     req.user,
     { name, about },
@@ -55,31 +68,61 @@ module.exports.updateUser = (req, res) => {
       runValidators: true,
     },
   )
-    .then((user) => res.send({ data: user }))
-    .catch((err) => {
-      if (err instanceof mongoose.Error.ValidationError) {
-        return res.status(UNCORRECT_DATA)
-          .send({ message: 'Переданы некорректные данные при обновлении профиля' });
+    .then((user) => {
+      if (!user) {
+        throw new DataNotFoundError('Такого пользователя не существует');
       }
-      return res.status(DEFAULT_ERROR)
-        .send({ message: 'Что-то пошло не так' });
+      res.send({ data: user });
+    })
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        next(new UncorrectDataError('Переданы некорректные данные при обновлении профиля'));
+      } else {
+        next(err);
+      }
     });
 };
 
-module.exports.updateAvatar = (req, res) => {
+module.exports.updateAvatar = (req, res, next) => {
   const { avatar } = req.body;
-
-  User.findByIdAndUpdate((req.user), { avatar }, {
-    new: true,
-    runValidators: true,
-  })
-    .then((user) => res.send({ data: user }))
-    .catch((err) => {
-      if (err instanceof mongoose.Error.ValidationError) {
-        return res.status(UNCORRECT_DATA)
-          .send({ message: 'Переданы некорректные данные при обновлении аватара' });
+  User.findByIdAndUpdate(
+    req.user,
+    { avatar },
+    {
+      new: true,
+      runValidators: true,
+    },
+  )
+    .then((user) => {
+      if (!user) {
+        throw new UncorrectDataError('Такого пользователя не существует');
       }
-      return res.status(DEFAULT_ERROR)
-        .send({ message: 'Что-то пошло не так' });
+      res.send({ data: user });
+    })
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        next(new UncorrectDataError('Переданы некорректные данные при обновлении аватара'));
+      } else {
+        next(err);
+      }
     });
+};
+
+module.exports.login = (req, res, next) => {
+  const { email, password } = req.body;
+  User.findUserByCredentials(email, password)
+    .then((user) => {
+      const token = jwt.sign(
+        { _id: user._id },
+        'secret-key',
+        { expiresIn: '7d' },
+      );
+      res.cookie('jwt', token, {
+        maxAge: 3600000,
+        httpOnly: true,
+        sameSite: true,
+      });
+      res.send({ token });
+    })
+    .catch(next);
 };

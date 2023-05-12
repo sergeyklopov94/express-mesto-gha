@@ -1,88 +1,77 @@
-const mongoose = require('mongoose');
 const Card = require('../models/card');
-const { UNCORRECT_DATA, DATA_NOT_FOUND, DEFAULT_ERROR } = require('../utils/errorStatus');
 
-module.exports.getCards = (req, res) => {
+const UncorrectDataError = require('../errors/uncorrect-data-err');
+const DataNotFoundError = require('../errors/data-not-found-err');
+const ForbiddenError = require('../errors/forbidden-err');
+
+module.exports.getCards = (req, res, next) => {
   Card.find({})
     .populate(['owner', 'likes'])
     .then((cards) => res.send({ data: cards }))
-    .catch(() => res.status(DEFAULT_ERROR)
-      .send({ message: 'Что-то пошло не так' }));
+    .catch(next);
 };
 
-module.exports.createCard = (req, res) => {
+module.exports.createCard = (req, res, next) => {
   const { name, link } = req.body;
-  const { user } = req;
-
-  Card.create({ name, link, owner: user._id })
-    .then((card) => card.populate(['owner', 'likes']))
+  Card.create({ name, link, owner: req.user._id })
+    .then((card) => card.populate('owner'))
     .then((card) => res.send({ data: card }))
     .catch((err) => {
-      if (err instanceof mongoose.Error.ValidationError) {
-        return res.status(UNCORRECT_DATA)
-          .send({ message: 'Переданы некорректные данные при создании карточки' });
+      if (err.name === 'ValidationError') {
+        next(new UncorrectDataError('Переданы некорректные данные при создании карточки'));
+      } else {
+        next(err);
       }
-      return res.status(DEFAULT_ERROR)
-        .send({ message: 'Что-то пошло не так' });
     });
 };
 
-module.exports.deleteCardById = (req, res) => {
-  Card.findByIdAndDelete(req.params.cardId)
-    .populate(['owner', 'likes'])
+module.exports.deleteCardById = (req, res, next) => {
+  Card.findById(req.params.cardId)
     .then((card) => {
-      if (card === null) {
-        return res.status(DATA_NOT_FOUND)
-          .send({ message: 'Передан несуществующий _id карточки' });
+      if (!card) {
+        throw new DataNotFoundError('Такой карточки не существует');
+      } else if (card.owner.toString() !== req.user._id) {
+        throw new ForbiddenError('Запрещено удаление карточки другого пользователя');
       }
-      return res.send({ data: card });
+      Card.findByIdAndDelete(req.params.cardId)
+        .populate('owner')
+        .then(() => res.send({ message: 'Карточка удалена' }));
     })
     .catch((err) => {
-      if (err instanceof mongoose.Error.CastError) {
-        return res.status(UNCORRECT_DATA)
-          .send({ message: 'Переданы некорректные данные для удаления карточки' });
+      if (err.name === 'CastError') {
+        next(new DataNotFoundError('Карточка с указанным _id не найдена'));
+      } else {
+        next(err);
       }
-      return res.status(DEFAULT_ERROR)
-        .send({ message: 'Что-то пошло не так' });
     });
 };
 
-module.exports.likeCard = (req, res) => {
+module.exports.likeCard = (req, res, next) => {
   Card.findByIdAndUpdate(req.params.cardId, { $addToSet: { likes: req.user._id } }, { new: true })
-    .populate(['owner', 'likes'])
-    .then((card) => {
-      if (card === null) {
-        return res.status(DATA_NOT_FOUND)
-          .send({ message: 'Передан несуществующий _id карточки' });
-      }
-      return res.send({ data: card });
-    })
+    .populate('owner')
+    .then((card) => res.send({ data: card }))
     .catch((err) => {
-      if (err instanceof mongoose.Error.CastError) {
-        return res.status(UNCORRECT_DATA)
-          .send({ message: 'Переданы некорректные данные для постановки лайка' });
+      if (err.name === 'CastError') {
+        next(new DataNotFoundError('Передан несуществующий _id карточки'));
+      } else if (err.name === 'ValidationError') {
+        next(new UncorrectDataError('Переданы некорректные данные для постановки лайка'));
+      } else {
+        next(err);
       }
-      return res.status(DEFAULT_ERROR)
-        .send({ message: 'Что-то пошло не так' });
     });
 };
 
-module.exports.dislikeCard = (req, res) => {
+module.exports.dislikeCard = (req, res, next) => {
   Card.findByIdAndUpdate(req.params.cardId, { $pull: { likes: req.user._id } }, { new: true })
-    .populate(['owner', 'likes'])
-    .then((card) => {
-      if (card === null) {
-        return res.status(DATA_NOT_FOUND)
-          .send({ message: 'Передан несуществующий _id карточки' });
-      }
-      return res.send({ data: card });
-    })
+    .populate('owner')
+    .then((card) => res.send({ data: card }))
     .catch((err) => {
-      if (err instanceof mongoose.Error.CastError) {
-        return res.status(UNCORRECT_DATA)
-          .send({ message: 'Переданы некорректные данные для cнятия лайка' });
+      if (err.name === 'CastError') {
+        next(new DataNotFoundError('Передан несуществующий _id карточки'));
+      } else if (err.name === 'ValidationError') {
+        next(new UncorrectDataError('Переданы некорректные данные для снятия лайка'));
+      } else {
+        next(err);
       }
-      return res.status(DEFAULT_ERROR)
-        .send({ message: 'Что-то пошло не так' });
     });
 };
