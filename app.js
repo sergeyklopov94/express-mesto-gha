@@ -5,6 +5,7 @@ const cookieParser = require('cookie-parser');
 const { login, createUser } = require('./controllers/users');
 const auth = require('./middlewares/auth');
 const { createUserValidation, loginValidation } = require('./middlewares/userValidation');
+const { errors } = require('celebrate');
 
 const { PORT = 3000 } = process.env;
 
@@ -37,6 +38,8 @@ app.use((err, req, res, next) => {
     : message
    });
 });
+
+app.use(errors());
 
 app.listen(PORT, () => {
   console.log('xyi');
