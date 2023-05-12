@@ -42,5 +42,5 @@ app.use((err, req, res) => {
 app.use(errors());
 
 app.listen(PORT, () => {
-  console.log('xyi');
+  console.log('сервер запущен');
 });
