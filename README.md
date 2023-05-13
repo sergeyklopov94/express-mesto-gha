@@ -22,7 +22,7 @@
 
 Статус проекта: в разработке. В ближайшее время планируется подключить фронтенд часть к серверу.
 
-* [Ссылка на проект](https://sergeyklopov94.github.io/express-mesto-gha/)
+* [Ссылка на проект](https://github.com/sergeyklopov94/express-mesto-gha.git)
 
 ## Директории
 
